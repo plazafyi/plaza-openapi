@@ -15,6 +15,7 @@ It is generated with [Stainless](https://www.stainless.com/).
 
 Our official clients are generated from this spec:
 
+- [plaza-typescript](https://github.com/plazafyi/plaza-typescript) (TypeScript)
 - [plaza-python](https://github.com/plazafyi/plaza-python) (Python)
 - [plaza-go](https://github.com/plazafyi/plaza-go) (Go)
 - [plaza-cli](https://github.com/plazafyi/plaza-cli) (CLI)
