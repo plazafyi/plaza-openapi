@@ -16,3 +16,4 @@ It is generated with [Stainless](https://www.stainless.com/).
 Our official clients are generated from this spec:
 
 - [plaza-python](https://github.com/plazafyi/plaza-python) (Python)
+- [plaza-go](https://github.com/plazafyi/plaza-go) (Go)
