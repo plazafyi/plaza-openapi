@@ -17,4 +17,5 @@ Our official clients are generated from this spec:
 
 - [plaza-python](https://github.com/plazafyi/plaza-python) (Python)
 - [plaza-go](https://github.com/plazafyi/plaza-go) (Go)
+- [plaza-cli](https://github.com/plazafyi/plaza-cli) (CLI)
 - [plaza-sql](https://github.com/plazafyi/plaza-sql) (SQL)
