@@ -1,0 +1,3388 @@
+{
+  "components": {
+    "responses": {},
+    "schemas": {
+      "ReverseGeocodeResult": {
+        "description": "GeoJSON FeatureCollection of reverse geocoding results, ordered by distance from the query point. Content-Type: `application/geo+json`.",
+        "properties": {
+          "features": {
+            "description": "Reverse geocoding results ordered by distance",
+            "items": { "$ref": "#/components/schemas/GeocodingFeature" },
+            "type": "array"
+          },
+          "type": { "enum": ["FeatureCollection"], "type": "string" }
+        },
+        "required": ["type", "features"],
+        "title": "ReverseGeocodeResult",
+        "type": "object"
+      },
+      "AutocompleteResult": {
+        "description": "GeoJSON FeatureCollection of autocomplete suggestions for partial address input. Optimized for low-latency type-ahead UIs. Content-Type: `application/geo+json`.",
+        "properties": {
+          "features": {
+            "description": "Autocomplete suggestions ordered by relevance",
+            "items": { "$ref": "#/components/schemas/GeocodingFeature" },
+            "type": "array"
+          },
+          "type": { "enum": ["FeatureCollection"], "type": "string" }
+        },
+        "required": ["type", "features"],
+        "title": "AutocompleteResult",
+        "type": "object"
+      },
+      "BatchRequest": {
+        "description": "Fetch multiple OSM elements by their type and ID in a single request. Maximum 100 elements per batch.",
+        "example": {
+          "elements": [
+            { "id": 21154906, "type": "node" },
+            { "id": 4589123, "type": "way" }
+          ]
+        },
+        "properties": {
+          "elements": {
+            "description": "Array of element references to fetch",
+            "items": {
+              "description": "Reference to a single OSM element",
+              "properties": {
+                "id": {
+                  "description": "OSM element ID",
+                  "example": 21154906,
+                  "type": "integer"
+                },
+                "type": {
+                  "description": "OSM element type",
+                  "enum": ["node", "way", "relation"],
+                  "type": "string"
+                }
+              },
+              "required": ["type", "id"],
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["elements"],
+        "title": "BatchRequest",
+        "type": "object"
+      },
+      "RouteResult": {
+        "description": "GeoJSON Feature representing a calculated route. The geometry is a LineString or MultiLineString of the route path. When `alternatives > 0`, the response is a FeatureCollection containing multiple route Features.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Route geometry as a GeoJSON LineString or MultiLineString"
+          },
+          "properties": {
+            "description": "Route metadata",
+            "properties": {
+              "annotations": {
+                "additionalProperties": true,
+                "description": "Per-edge annotations (present when `annotations: true` in request)",
+                "nullable": true,
+                "type": "object"
+              },
+              "charge_profile": {
+                "description": "Battery charge level at route waypoints as [distance_fraction, charge_pct] pairs (EV routes only)",
+                "items": { "items": { "type": "number" }, "type": "array" },
+                "nullable": true,
+                "type": "array"
+              },
+              "charging_stops": {
+                "description": "Recommended charging stops along the route (EV routes only)",
+                "items": { "additionalProperties": true, "type": "object" },
+                "nullable": true,
+                "type": "array"
+              },
+              "distance_m": {
+                "description": "Total route distance in meters",
+                "example": 4523.7,
+                "type": "number"
+              },
+              "duration_s": {
+                "description": "Estimated travel duration in seconds",
+                "example": 847.2,
+                "type": "number"
+              },
+              "edges": {
+                "description": "Edge-level route details (present when `annotations: true`)",
+                "items": { "additionalProperties": true, "type": "object" },
+                "nullable": true,
+                "type": "array"
+              },
+              "energy_used_wh": {
+                "description": "Total energy consumed in watt-hours (EV routes only)",
+                "nullable": true,
+                "type": "number"
+              }
+            },
+            "required": ["distance_m", "duration_s"],
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "RouteResult",
+        "type": "object"
+      },
+      "OptimizeJobStatus": {
+        "description": "Status of an async optimization job. When `completed`, the `result` field contains the full OptimizeCompletedResult. When `processing`, the job is still running — poll again. Failed jobs return a standard Error response (HTTP 422), not this schema.",
+        "properties": {
+          "result": {
+            "allOf": [
+              { "$ref": "#/components/schemas/OptimizeCompletedResult" }
+            ],
+            "description": "Optimization result (present only when status is `completed`)",
+            "nullable": true
+          },
+          "status": {
+            "description": "Current job state",
+            "enum": ["completed", "processing"],
+            "type": "string"
+          }
+        },
+        "required": ["status"],
+        "title": "OptimizeJobStatus",
+        "type": "object"
+      },
+      "BatchGeocodeResult": {
+        "description": "Batch geocoding result. Each entry in `results` is a FeatureCollection corresponding to the input address at the same index. Order is preserved.",
+        "properties": {
+          "count": {
+            "description": "Number of addresses processed (always equals length of results)",
+            "type": "integer"
+          },
+          "results": {
+            "description": "Array of FeatureCollections, one per input address. Empty FeatureCollections indicate no match.",
+            "items": { "$ref": "#/components/schemas/GeocodeResult" },
+            "type": "array"
+          }
+        },
+        "required": ["results", "count"],
+        "title": "BatchGeocodeResult",
+        "type": "object"
+      },
+      "MapMatchResult": {
+        "description": "Map matching result as a GeoJSON FeatureCollection. Each Feature is a snapped tracepoint. The top-level `matchings` array contains the matched sub-routes connecting consecutive tracepoints.",
+        "properties": {
+          "features": {
+            "description": "Snapped tracepoint Features in input order",
+            "items": {
+              "$ref": "#/components/schemas/MapMatchTracepointFeature"
+            },
+            "type": "array"
+          },
+          "matchings": {
+            "description": "Matched sub-routes. Each matching connects a contiguous sequence of tracepoints that could be matched to roads.",
+            "items": { "additionalProperties": true, "type": "object" },
+            "type": "array"
+          },
+          "type": { "enum": ["FeatureCollection"], "type": "string" }
+        },
+        "required": ["type", "features", "matchings"],
+        "title": "MapMatchResult",
+        "type": "object"
+      },
+      "DatasetFeatureUpdateRequest": {
+        "description": "Update a feature's geometry and/or properties.",
+        "properties": {
+          "geometry": { "$ref": "#/components/schemas/Geometry" },
+          "properties": {
+            "additionalProperties": true,
+            "description": "Updated properties (replaces existing)",
+            "nullable": true,
+            "type": "object"
+          }
+        },
+        "title": "DatasetFeatureUpdateRequest",
+        "type": "object"
+      },
+      "DatasetResponse": {
+        "description": "Metadata for a custom dataset. Datasets contain user-uploaded geospatial features separate from the OSM data.",
+        "properties": {
+          "address_count": {
+            "description": "Number of addresses in this dataset",
+            "type": "integer"
+          },
+          "attribution": {
+            "description": "Required attribution text",
+            "nullable": true,
+            "type": "string"
+          },
+          "description": {
+            "description": "Dataset description",
+            "nullable": true,
+            "type": "string"
+          },
+          "edge_count": {
+            "description": "Number of routing edges in this dataset",
+            "type": "integer"
+          },
+          "error_message": {
+            "description": "Error message if status is 'error'",
+            "nullable": true,
+            "type": "string"
+          },
+          "feature_count": {
+            "description": "Number of features in this dataset",
+            "type": "integer"
+          },
+          "id": {
+            "description": "Dataset UUID",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "Creation timestamp (UTC)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "license": {
+            "description": "License identifier (e.g. CC-BY-4.0)",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable dataset name",
+            "example": "NYC Bike Lanes",
+            "type": "string"
+          },
+          "schema_definition": {
+            "description": "Detected or user-defined property schema",
+            "nullable": true,
+            "type": "object"
+          },
+          "scope": {
+            "description": "Dataset scope: plaza (managed by Plaza) or user (user-owned)",
+            "enum": ["plaza", "user"],
+            "type": "string"
+          },
+          "slug": {
+            "description": "URL-friendly identifier",
+            "example": "nyc-bike-lanes",
+            "type": "string"
+          },
+          "source_format": {
+            "description": "Data format (geojson)",
+            "nullable": true,
+            "type": "string"
+          },
+          "source_url": {
+            "description": "URL of the original data source",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "Current processing status",
+            "enum": ["pending", "processing", "ready", "error"],
+            "type": "string"
+          },
+          "storage_bytes": {
+            "description": "Total storage consumed in bytes",
+            "type": "integer"
+          },
+          "strict_mode": {
+            "description": "Whether strict schema validation is enabled",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "description": "Last update timestamp (UTC)",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "scope",
+          "status",
+          "inserted_at",
+          "updated_at"
+        ],
+        "title": "DatasetResponse",
+        "type": "object"
+      },
+      "AutocompleteRequest": {
+        "description": "Request body for autocomplete suggestions. Optimized for low-latency type-ahead UIs.",
+        "properties": {
+          "country_code": {
+            "description": "ISO 3166-1 alpha-2 country code to restrict results",
+            "maxLength": 2,
+            "minLength": 2,
+            "nullable": true,
+            "type": "string"
+          },
+          "focus": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Bias results toward this point",
+            "nullable": true
+          },
+          "lang": {
+            "description": "Preferred response language (ISO 639-1)",
+            "nullable": true,
+            "type": "string"
+          },
+          "layer": {
+            "description": "Filter by result layer (e.g. `address`, `place`, `poi`)",
+            "nullable": true,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of suggestions (default: 5, max: 20)",
+            "maximum": 20,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "q": {
+            "description": "Partial address or place name input",
+            "example": "221B Bak",
+            "type": "string"
+          }
+        },
+        "required": ["q"],
+        "title": "AutocompleteRequest",
+        "type": "object"
+      },
+      "GeocodeResult": {
+        "description": "GeoJSON FeatureCollection of forward geocoding results, ordered by relevance. Content-Type: `application/geo+json`.",
+        "properties": {
+          "features": {
+            "description": "Geocoding results ordered by relevance score",
+            "items": { "$ref": "#/components/schemas/GeocodingFeature" },
+            "type": "array"
+          },
+          "type": { "enum": ["FeatureCollection"], "type": "string" }
+        },
+        "required": ["type", "features"],
+        "title": "GeocodeResult",
+        "type": "object"
+      },
+      "DatasetFeatureCreateRequest": {
+        "description": "Batch create request. Provide an array of GeoJSON Features with required id fields.",
+        "properties": {
+          "features": {
+            "description": "Array of GeoJSON Features to insert",
+            "items": {
+              "properties": {
+                "geometry": { "$ref": "#/components/schemas/Geometry" },
+                "id": {
+                  "description": "User-provided feature ID (required)",
+                  "type": "string"
+                },
+                "properties": { "additionalProperties": true, "type": "object" }
+              },
+              "required": ["id"],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["features"],
+        "title": "DatasetFeatureCreateRequest",
+        "type": "object"
+      },
+      "PolygonGeometry": {
+        "description": "GeoJSON Polygon geometry per RFC 7946. An array of linear rings where the first ring is the exterior boundary and subsequent rings are holes. Each ring must have at least 4 positions with the first and last being identical.",
+        "properties": {
+          "coordinates": {
+            "description": "Array of linear rings (first = exterior, rest = holes)",
+            "items": {
+              "items": {
+                "items": { "type": "number" },
+                "maxItems": 3,
+                "minItems": 2,
+                "type": "array"
+              },
+              "minItems": 4,
+              "type": "array"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "type": { "enum": ["Polygon"], "type": "string" }
+        },
+        "required": ["type", "coordinates"],
+        "title": "PolygonGeometry",
+        "type": "object"
+      },
+      "GeocodeForwardRequest": {
+        "description": "Request body for forward geocoding. Converts an address or place name to coordinates.",
+        "properties": {
+          "country_code": {
+            "description": "ISO 3166-1 alpha-2 country code to restrict results",
+            "maxLength": 2,
+            "minLength": 2,
+            "nullable": true,
+            "type": "string"
+          },
+          "focus": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Bias results toward this point",
+            "nullable": true
+          },
+          "lang": {
+            "description": "Preferred response language (ISO 639-1)",
+            "nullable": true,
+            "type": "string"
+          },
+          "layer": {
+            "description": "Filter by result layer (e.g. `address`, `place`, `poi`)",
+            "nullable": true,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of results (default: 5, max: 50)",
+            "maximum": 50,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "q": {
+            "description": "Address or place name to geocode",
+            "example": "221B Baker Street, London",
+            "type": "string"
+          }
+        },
+        "required": ["q"],
+        "title": "GeocodeForwardRequest",
+        "type": "object"
+      },
+      "ElevationProfileResult": {
+        "description": "GeoJSON LineString Feature with 3D coordinates [lng, lat, elevation] representing the elevation profile along the input path. Summary statistics are in properties.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "3D LineString: each coordinate is [longitude, latitude, elevation_meters]"
+          },
+          "properties": {
+            "description": "Elevation profile summary statistics",
+            "properties": {
+              "avg_elevation_m": {
+                "description": "Average elevation along the profile in meters",
+                "example": 67.8,
+                "type": "number"
+              },
+              "max_elevation_m": {
+                "description": "Maximum elevation along the profile in meters",
+                "example": 155.3,
+                "type": "number"
+              },
+              "min_elevation_m": {
+                "description": "Minimum elevation along the profile in meters",
+                "example": 28.1,
+                "type": "number"
+              },
+              "total_ascent_m": {
+                "description": "Total cumulative elevation gain in meters",
+                "example": 127.4,
+                "type": "number"
+              },
+              "total_descent_m": {
+                "description": "Total cumulative elevation loss in meters",
+                "example": 89.2,
+                "type": "number"
+              }
+            },
+            "required": [
+              "total_ascent_m",
+              "total_descent_m",
+              "min_elevation_m",
+              "max_elevation_m",
+              "avg_elevation_m"
+            ],
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "ElevationProfileResult",
+        "type": "object"
+      },
+      "MultiPointGeometry": {
+        "description": "GeoJSON MultiPoint geometry per RFC 7946. An array of positions.",
+        "properties": {
+          "coordinates": {
+            "description": "Array of [lng, lat] or [lng, lat, alt] positions",
+            "items": {
+              "items": { "type": "number" },
+              "maxItems": 3,
+              "minItems": 2,
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "type": { "enum": ["MultiPoint"], "type": "string" }
+        },
+        "required": ["type", "coordinates"],
+        "title": "MultiPointGeometry",
+        "type": "object"
+      },
+      "Error": {
+        "description": "Standard API error envelope. Every error response wraps a single `error` object with a machine-readable `code`, a human-readable `message`, and optional structured `details`.",
+        "example": {
+          "error": {
+            "code": "invalid_request",
+            "message": "Missing required parameter: q"
+          }
+        },
+        "properties": {
+          "error": {
+            "description": "Error payload",
+            "properties": {
+              "code": {
+                "description": "Machine-readable error code (e.g. `invalid_request`, `not_found`, `rate_limited`, `query_error`, `daily_limit_exceeded`)",
+                "example": "invalid_request",
+                "type": "string"
+              },
+              "details": {
+                "additionalProperties": true,
+                "description": "Structured details when available (e.g. field-level validation errors, rate limit metadata, billing info)",
+                "nullable": true,
+                "type": "object"
+              },
+              "message": {
+                "description": "Human-readable explanation of what went wrong",
+                "example": "Missing required parameter: q",
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "type": "object"
+          }
+        },
+        "required": ["error"],
+        "title": "Error",
+        "type": "object"
+      },
+      "Geometry": {
+        "description": "GeoJSON Geometry object per RFC 7946. Discriminated union — the `type` field determines the coordinate structure.",
+        "discriminator": {
+          "mapping": {
+            "LineString": "#/components/schemas/LineStringGeometry",
+            "MultiLineString": "#/components/schemas/MultiLineStringGeometry",
+            "MultiPoint": "#/components/schemas/MultiPointGeometry",
+            "MultiPolygon": "#/components/schemas/MultiPolygonGeometry",
+            "Point": "#/components/schemas/PointGeometry",
+            "Polygon": "#/components/schemas/PolygonGeometry"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          { "$ref": "#/components/schemas/PointGeometry" },
+          { "$ref": "#/components/schemas/LineStringGeometry" },
+          { "$ref": "#/components/schemas/PolygonGeometry" },
+          { "$ref": "#/components/schemas/MultiPointGeometry" },
+          { "$ref": "#/components/schemas/MultiLineStringGeometry" },
+          { "$ref": "#/components/schemas/MultiPolygonGeometry" }
+        ],
+        "title": "Geometry"
+      },
+      "NearestRequest": {
+        "description": "Request body for nearest-road-segment lookup. Snaps a point to the road network.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Point to snap to the road network"
+          },
+          "radius": {
+            "description": "Maximum search radius in meters (default: 100)",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": ["geometry"],
+        "title": "NearestRequest",
+        "type": "object"
+      },
+      "PointGeometry": {
+        "description": "GeoJSON Point geometry per RFC 7946. Coordinates use [longitude, latitude] order. Optional third element is altitude in meters.",
+        "properties": {
+          "coordinates": {
+            "description": "[longitude, latitude] or [longitude, latitude, altitude]",
+            "example": [2.3522, 48.8566],
+            "items": { "type": "number" },
+            "maxItems": 3,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": { "enum": ["Point"], "type": "string" }
+        },
+        "required": ["type", "coordinates"],
+        "title": "PointGeometry",
+        "type": "object"
+      },
+      "PlazaQLQuery": {
+        "description": "PlazaQL query request. The query is executed against Plaza's OSM database and results are returned as GeoJSON.",
+        "properties": {
+          "data": {
+            "description": "PlazaQL query string",
+            "example": "$$ = search(node, amenity: \"cafe\").around(distance: 500, geometry: point(48.8566, 2.3522));",
+            "type": "string"
+          }
+        },
+        "required": ["data"],
+        "title": "PlazaQLQuery",
+        "type": "object"
+      },
+      "IsochroneRequest": {
+        "description": "Request body for isochrone calculation. Computes areas reachable from a point within the given travel time(s).",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Origin point for isochrone calculation"
+          },
+          "mode": {
+            "default": "auto",
+            "description": "Travel mode (default: `auto`)",
+            "enum": ["auto", "foot", "bicycle"],
+            "type": "string"
+          },
+          "time": {
+            "description": "Travel time budgets in seconds. Each value produces one contour polygon.",
+            "items": { "minimum": 1, "type": "integer" },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["geometry", "time"],
+        "title": "IsochroneRequest",
+        "type": "object"
+      },
+      "OptimizeRequest": {
+        "description": "Route optimization (Travelling Salesman) request. Finds the most efficient order to visit a set of waypoints. Minimum 2 waypoints, maximum 50. For large inputs, the request may be processed asynchronously.",
+        "example": {
+          "roundtrip": false,
+          "waypoints": {
+            "coordinates": [
+              [2.3522, 48.8566],
+              [2.3376, 48.8606],
+              [2.2945, 48.8584]
+            ],
+            "type": "MultiPoint"
+          }
+        },
+        "properties": {
+          "mode": {
+            "default": "auto",
+            "description": "Travel mode (default: `auto`)",
+            "enum": ["auto", "foot", "bicycle"],
+            "type": "string"
+          },
+          "roundtrip": {
+            "default": true,
+            "description": "Whether the route should return to the starting waypoint (default: true)",
+            "type": "boolean"
+          },
+          "waypoints": {
+            "allOf": [{ "$ref": "#/components/schemas/MultiPointGeometry" }],
+            "description": "Waypoints to visit in optimized order as a GeoJSON MultiPoint (2-50 points)"
+          }
+        },
+        "required": ["waypoints"],
+        "title": "OptimizeRequest",
+        "type": "object"
+      },
+      "DatasetCreateRequest": {
+        "description": "Request body to create a new dataset.",
+        "properties": {
+          "attribution": {
+            "description": "Required attribution text",
+            "nullable": true,
+            "type": "string"
+          },
+          "description": {
+            "description": "Dataset description",
+            "nullable": true,
+            "type": "string"
+          },
+          "license": {
+            "description": "License identifier (e.g. CC-BY-4.0)",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable dataset name",
+            "example": "NYC Bike Lanes",
+            "type": "string"
+          },
+          "slug": {
+            "description": "URL-friendly identifier (lowercase, hyphens, no spaces)",
+            "example": "nyc-bike-lanes",
+            "pattern": "^[a-z0-9-]+$",
+            "type": "string"
+          },
+          "source_url": {
+            "description": "Source data URL",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "strict_mode": {
+            "description": "Enable strict schema validation (default true)",
+            "nullable": true,
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "slug"],
+        "title": "DatasetCreateRequest",
+        "type": "object"
+      },
+      "MapMatchRequest": {
+        "description": "GPS trace to snap to the road network. Provide a GeoJSON LineString geometry representing the GPS trace.",
+        "example": {
+          "geometry": {
+            "coordinates": [
+              [2.3522, 48.8566],
+              [2.353, 48.857],
+              [2.354, 48.8575]
+            ],
+            "type": "LineString"
+          }
+        },
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/LineStringGeometry" }],
+            "description": "GPS trace as a GeoJSON LineString"
+          },
+          "radiuses": {
+            "description": "Search radius per coordinate in meters. Must have the same length as the geometry coordinates or be omitted entirely. Default: 50m per point.",
+            "items": { "minimum": 0, "type": "number" },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "required": ["geometry"],
+        "title": "MapMatchRequest",
+        "type": "object"
+      },
+      "DatasetFeatureResponse": {
+        "description": "A GeoJSON Feature from a custom dataset.",
+        "properties": {
+          "geometry": { "$ref": "#/components/schemas/Geometry" },
+          "id": {
+            "description": "Composite ID (dataset_id/feature_id)",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "description": "Feature properties including @type, @id, @dataset metadata",
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "id", "geometry", "properties"],
+        "title": "DatasetFeatureResponse",
+        "type": "object"
+      },
+      "MatrixResult": {
+        "additionalProperties": true,
+        "description": "Distance matrix result. The exact response shape depends on the routing backend. Contains duration (and optionally distance) data for all origin-destination pairs. Null values indicate unreachable pairs.",
+        "title": "MatrixResult",
+        "type": "object"
+      },
+      "IsochroneResult": {
+        "description": "GeoJSON FeatureCollection of isochrone polygons — areas reachable within the specified travel time(s). Each Feature is a Polygon contour with travel time and area metadata in properties.",
+        "properties": {
+          "features": {
+            "description": "Array of isochrone polygon Features, one per contour",
+            "items": { "$ref": "#/components/schemas/GeoJsonFeature" },
+            "type": "array"
+          },
+          "type": {
+            "description": "Always `FeatureCollection`",
+            "enum": ["FeatureCollection"],
+            "type": "string"
+          }
+        },
+        "required": ["type", "features"],
+        "title": "IsochroneResult",
+        "type": "object"
+      },
+      "GeocodeReverseRequest": {
+        "description": "Request body for reverse geocoding. Converts coordinates to addresses or place names.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Point to reverse geocode"
+          },
+          "lang": {
+            "description": "Preferred response language (ISO 639-1)",
+            "nullable": true,
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum number of results (default: 1, max: 50)",
+            "maximum": 50,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "radius": {
+            "description": "Search radius in meters (default: 100)",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": ["geometry"],
+        "title": "GeocodeReverseRequest",
+        "type": "object"
+      },
+      "DatasetUpdateRequest": {
+        "description": "Request body to update a dataset. All fields are optional.",
+        "properties": {
+          "description": {
+            "description": "Dataset description",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable dataset name",
+            "nullable": true,
+            "type": "string"
+          },
+          "strict_mode": {
+            "description": "Enable strict schema validation",
+            "nullable": true,
+            "type": "boolean"
+          }
+        },
+        "title": "DatasetUpdateRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "description": "Validation error with per-field details. The `details` object maps field names to arrays of error messages.",
+        "properties": {
+          "error": {
+            "properties": {
+              "code": {
+                "description": "Always `validation_failed`",
+                "enum": ["validation_failed"],
+                "type": "string"
+              },
+              "details": {
+                "additionalProperties": {
+                  "items": { "type": "string" },
+                  "type": "array"
+                },
+                "description": "Map of field names to error message arrays",
+                "example": {
+                  "name": ["can't be blank"],
+                  "slug": ["has already been taken"]
+                },
+                "nullable": true,
+                "type": "object"
+              },
+              "message": {
+                "description": "Human-readable summary",
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "type": "object"
+          }
+        },
+        "required": ["error"],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "MatrixRequest": {
+        "description": "Request body for distance matrix calculation. Computes travel durations (and optionally distances) between every origin-destination pair. Maximum 2,500 pairs (origins × destinations), each list capped at 50 coordinates.",
+        "example": {
+          "destinations": [
+            { "coordinates": [2.2945, 48.8584], "type": "Point" }
+          ],
+          "mode": "auto",
+          "origins": [
+            { "coordinates": [2.3522, 48.8566], "type": "Point" },
+            { "coordinates": [2.3376, 48.8606], "type": "Point" }
+          ]
+        },
+        "properties": {
+          "annotations": {
+            "default": "duration",
+            "description": "Comma-separated list of annotations to include: `duration` (always included), `distance`. Example: `duration,distance`.",
+            "type": "string"
+          },
+          "destinations": {
+            "description": "Array of destination coordinates as GeoJSON Points (max 50)",
+            "items": { "$ref": "#/components/schemas/PointGeometry" },
+            "maxItems": 50,
+            "minItems": 1,
+            "type": "array"
+          },
+          "fallback_speed": {
+            "description": "Fallback speed in km/h for pairs where no route exists. When set, unreachable pairs get estimated values instead of null.",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
+          },
+          "mode": {
+            "default": "auto",
+            "description": "Travel mode (default: `auto`)",
+            "enum": ["auto", "foot", "bicycle"],
+            "type": "string"
+          },
+          "origins": {
+            "description": "Array of origin coordinates as GeoJSON Points (max 50)",
+            "items": { "$ref": "#/components/schemas/PointGeometry" },
+            "maxItems": 50,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["origins", "destinations"],
+        "title": "MatrixRequest",
+        "type": "object"
+      },
+      "MapMatchTracepointFeature": {
+        "description": "GeoJSON Point Feature representing a GPS point snapped to the road network.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Snapped point on the road as a GeoJSON Point"
+          },
+          "properties": {
+            "properties": {
+              "distance_m": {
+                "description": "Distance from the original GPS point to the snapped point in meters",
+                "type": "number"
+              },
+              "edge_id": {
+                "description": "Road edge ID the point was snapped to",
+                "type": "integer"
+              },
+              "matchings_index": {
+                "description": "Index into the `matchings` array indicating which matching sub-route this point belongs to",
+                "type": "integer"
+              },
+              "name": {
+                "description": "Road name at the snapped point",
+                "nullable": true,
+                "type": "string"
+              },
+              "original": {
+                "description": "Original GPS coordinate as [lng, lat]",
+                "items": { "type": "number" },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "waypoint_index": {
+                "description": "Index of this tracepoint in the original `coordinates` array",
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "MapMatchTracepointFeature",
+        "type": "object"
+      },
+      "DatasetList": {
+        "description": "List of datasets visible to the authenticated user.",
+        "properties": {
+          "datasets": {
+            "description": "Array of dataset metadata objects",
+            "items": { "$ref": "#/components/schemas/DatasetResponse" },
+            "type": "array"
+          }
+        },
+        "required": ["datasets"],
+        "title": "DatasetList",
+        "type": "object"
+      },
+      "MultiPolygonGeometry": {
+        "description": "GeoJSON MultiPolygon geometry per RFC 7946. An array of Polygon coordinate arrays.",
+        "properties": {
+          "coordinates": {
+            "description": "Array of Polygon coordinate arrays",
+            "items": {
+              "items": {
+                "items": {
+                  "items": { "type": "number" },
+                  "maxItems": 3,
+                  "minItems": 2,
+                  "type": "array"
+                },
+                "minItems": 4,
+                "type": "array"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "type": { "enum": ["MultiPolygon"], "type": "string" }
+        },
+        "required": ["type", "coordinates"],
+        "title": "MultiPolygonGeometry",
+        "type": "object"
+      },
+      "ElevationLookupRequest": {
+        "description": "Request body for elevation lookup. Accepts a single Point or a MultiPoint geometry.",
+        "properties": {
+          "geometry": {
+            "description": "Point or MultiPoint geometry to look up elevations for",
+            "oneOf": [
+              { "$ref": "#/components/schemas/PointGeometry" },
+              { "$ref": "#/components/schemas/MultiPointGeometry" }
+            ]
+          }
+        },
+        "required": ["geometry"],
+        "title": "ElevationLookupRequest",
+        "type": "object"
+      },
+      "OptimizeProcessingResult": {
+        "description": "Async optimization in progress. Poll `GET /api/v1/optimize/{job_id}` until the status changes to `completed` or `failed`.",
+        "properties": {
+          "job_id": {
+            "description": "Job ID for polling the result",
+            "example": "opt_abc123",
+            "type": "string"
+          },
+          "status": {
+            "description": "Always `processing`",
+            "enum": ["processing"],
+            "type": "string"
+          }
+        },
+        "required": ["status", "job_id"],
+        "title": "OptimizeProcessingResult",
+        "type": "object"
+      },
+      "ElevationProfileRequest": {
+        "description": "Request body for elevation profile along a path. Provide a GeoJSON LineString geometry defining the path.",
+        "example": {
+          "geometry": {
+            "coordinates": [
+              [2.3522, 48.8566],
+              [2.34, 48.858],
+              [2.2945, 48.8584]
+            ],
+            "type": "LineString"
+          }
+        },
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/LineStringGeometry" }],
+            "description": "Path as a GeoJSON LineString"
+          }
+        },
+        "required": ["geometry"],
+        "title": "ElevationProfileRequest",
+        "type": "object"
+      },
+      "DatasetFeatureList": {
+        "description": "GeoJSON FeatureCollection of dataset features.",
+        "properties": {
+          "features": {
+            "description": "Array of GeoJSON Features",
+            "items": { "$ref": "#/components/schemas/DatasetFeatureResponse" },
+            "type": "array"
+          },
+          "type": { "enum": ["FeatureCollection"], "type": "string" }
+        },
+        "required": ["type", "features"],
+        "title": "DatasetFeatureList",
+        "type": "object"
+      },
+      "RouteRequest": {
+        "description": "Request body for route calculation. Origin and destination are GeoJSON Point geometries. Supports optional waypoints, alternative routes, turn-by-turn steps, and EV routing parameters.",
+        "example": {
+          "destination": { "coordinates": [2.2945, 48.8584], "type": "Point" },
+          "mode": "auto",
+          "origin": { "coordinates": [2.3522, 48.8566], "type": "Point" }
+        },
+        "properties": {
+          "alternatives": {
+            "default": 0,
+            "description": "Number of alternative routes to return (0-3, default 0). When > 0, response is a FeatureCollection of route Features.",
+            "maximum": 3,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "annotations": {
+            "default": false,
+            "description": "Include per-edge annotations (speed, duration) on the route (default: false)",
+            "type": "boolean"
+          },
+          "depart_at": {
+            "description": "Departure time for traffic-aware routing (ISO 8601)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "destination": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Ending point"
+          },
+          "ev": {
+            "description": "Electric vehicle parameters for EV-aware routing",
+            "nullable": true,
+            "properties": {
+              "battery_capacity_wh": {
+                "description": "Total battery capacity in watt-hours (required for EV routing)",
+                "example": 75000,
+                "type": "number"
+              },
+              "connector_types": {
+                "description": "Acceptable connector types (e.g. `[\"ccs\", \"chademo\"]`)",
+                "items": { "type": "string" },
+                "nullable": true,
+                "type": "array"
+              },
+              "initial_charge_pct": {
+                "default": 0.8,
+                "description": "Starting charge as a fraction 0-1 (default: 0.8)",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "min_charge_pct": {
+                "default": 0.1,
+                "description": "Minimum acceptable charge at destination as a fraction 0-1 (default: 0.10)",
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              "min_power_kw": {
+                "description": "Minimum charger power in kilowatts",
+                "nullable": true,
+                "type": "number"
+              }
+            },
+            "required": ["battery_capacity_wh"],
+            "type": "object"
+          },
+          "exclude": {
+            "description": "Comma-separated road types to exclude (e.g. `toll,motorway,ferry`)",
+            "nullable": true,
+            "type": "string"
+          },
+          "geometries": {
+            "default": "geojson",
+            "description": "Geometry encoding format. Default: `geojson`.",
+            "enum": ["geojson", "polyline", "polyline6"],
+            "type": "string"
+          },
+          "mode": {
+            "default": "auto",
+            "description": "Travel mode (default: `auto`)",
+            "enum": ["auto", "foot", "bicycle"],
+            "type": "string"
+          },
+          "origin": {
+            "allOf": [{ "$ref": "#/components/schemas/PointGeometry" }],
+            "description": "Starting point"
+          },
+          "overview": {
+            "default": "full",
+            "description": "Level of geometry detail: `full` (all points), `simplified` (Douglas-Peucker), `false` (no geometry). Default: `full`.",
+            "enum": ["full", "simplified", "false"],
+            "type": "string"
+          },
+          "steps": {
+            "default": false,
+            "description": "Include turn-by-turn navigation steps (default: false)",
+            "type": "boolean"
+          },
+          "traffic_model": {
+            "description": "Traffic prediction model (only used when `depart_at` is set)",
+            "enum": ["best_guess", "optimistic", "pessimistic"],
+            "nullable": true,
+            "type": "string"
+          },
+          "waypoints": {
+            "description": "Intermediate waypoints to visit in order (maximum 25)",
+            "items": { "$ref": "#/components/schemas/PointGeometry" },
+            "maxItems": 25,
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "required": ["origin", "destination"],
+        "title": "RouteRequest",
+        "type": "object"
+      },
+      "OptimizeResult": {
+        "description": "Optimization response — either a completed FeatureCollection with the optimized route, or an async job reference to poll.",
+        "oneOf": [
+          { "$ref": "#/components/schemas/OptimizeCompletedResult" },
+          { "$ref": "#/components/schemas/OptimizeProcessingResult" }
+        ],
+        "title": "OptimizeResult"
+      },
+      "OptimizeCompletedResult": {
+        "description": "Completed optimization result as a GeoJSON FeatureCollection. Each Feature is a waypoint in optimized visit order. Top-level fields provide summary statistics.",
+        "properties": {
+          "features": {
+            "description": "Waypoints in optimized visit order",
+            "items": { "$ref": "#/components/schemas/OptimizeWaypointFeature" },
+            "type": "array"
+          },
+          "optimization": {
+            "description": "Optimization method used (e.g. `nearest_neighbor`, `2opt`)",
+            "type": "string"
+          },
+          "roundtrip": {
+            "description": "Whether the route returns to the starting waypoint",
+            "type": "boolean"
+          },
+          "total_cost_s": {
+            "description": "Total travel time for the optimized route in seconds",
+            "type": "number"
+          },
+          "type": { "enum": ["FeatureCollection"], "type": "string" }
+        },
+        "required": [
+          "type",
+          "features",
+          "total_cost_s",
+          "optimization",
+          "roundtrip"
+        ],
+        "title": "OptimizeCompletedResult",
+        "type": "object"
+      },
+      "OptimizeWaypointFeature": {
+        "description": "GeoJSON Point Feature representing an optimized waypoint with cost data.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Waypoint location as a GeoJSON Point"
+          },
+          "properties": {
+            "properties": {
+              "cost_s": {
+                "description": "Travel time in seconds from the previous waypoint to this one (0 for the first waypoint)",
+                "type": "number"
+              },
+              "cumulative_cost_s": {
+                "description": "Cumulative travel time in seconds from the start to this waypoint",
+                "type": "number"
+              },
+              "waypoint_index": {
+                "description": "Position of this waypoint in the optimized visit order (0-based)",
+                "type": "integer"
+              }
+            },
+            "required": ["waypoint_index", "cost_s", "cumulative_cost_s"],
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "OptimizeWaypointFeature",
+        "type": "object"
+      },
+      "LineStringGeometry": {
+        "description": "GeoJSON LineString geometry per RFC 7946. An ordered sequence of two or more positions.",
+        "properties": {
+          "coordinates": {
+            "description": "Array of [lng, lat] or [lng, lat, alt] positions",
+            "items": {
+              "items": { "type": "number" },
+              "maxItems": 3,
+              "minItems": 2,
+              "type": "array"
+            },
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": { "enum": ["LineString"], "type": "string" }
+        },
+        "required": ["type", "coordinates"],
+        "title": "LineStringGeometry",
+        "type": "object"
+      },
+      "NearestResult": {
+        "description": "GeoJSON Point Feature representing the nearest point on the road network to the input coordinate. Used for snapping GPS coordinates to roads.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Snapped point on the road network as a GeoJSON Point"
+          },
+          "properties": {
+            "description": "Snap result metadata",
+            "properties": {
+              "distance_m": {
+                "description": "Distance from the input coordinate to the snapped point in meters",
+                "example": 12.4,
+                "type": "number"
+              },
+              "edge_id": {
+                "description": "ID of the road network edge that was snapped to",
+                "type": "integer"
+              },
+              "edge_length_m": {
+                "description": "Length of the matched road edge in meters",
+                "type": "number"
+              },
+              "highway": {
+                "description": "OSM highway tag value (e.g. `residential`, `primary`, `motorway`)",
+                "nullable": true,
+                "type": "string"
+              },
+              "osm_way_id": {
+                "description": "OSM way ID of the matched road segment",
+                "type": "integer"
+              },
+              "surface": {
+                "description": "OSM surface tag value (e.g. `asphalt`, `gravel`, `paved`)",
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "NearestResult",
+        "type": "object"
+      },
+      "GeoJsonFeature": {
+        "description": "GeoJSON Feature representing an OSM element. Tags from the original OSM element are flattened directly into `properties` (not nested under a `tags` key). Metadata fields `@type` and `@id` identify the OSM element type and ID within properties.\n",
+        "properties": {
+          "geometry": { "$ref": "#/components/schemas/Geometry" },
+          "id": {
+            "description": "Compound identifier in `type/osm_id` format",
+            "example": "node/21154906",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "description": "OSM tags flattened as key-value pairs, plus `@type` (node/way/relation) and `@id` (OSM ID) metadata fields. May include `distance_m` for proximity queries.",
+            "example": {
+              "@id": 21154906,
+              "@type": "node",
+              "amenity": "cafe",
+              "cuisine": "coffee_shop",
+              "name": "Café de Flore"
+            },
+            "type": "object"
+          },
+          "type": {
+            "description": "Always `Feature`",
+            "enum": ["Feature"],
+            "type": "string"
+          }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "GeoJsonFeature",
+        "type": "object"
+      },
+      "SpatialPredicate": {
+        "description": "Spatial predicates for filtering features by geographic relationship. Predicates are mutually exclusive — use exactly one per request. The parameter name is the spatial operation, the value is a GeoJSON geometry to test against.\n\n| Predicate | Meaning |\n|---|---|\n| `around` | Within radius meters (requires `radius`) |\n| `intersects` | Feature overlaps the input geometry |\n| `within` | Feature is fully inside the input geometry |\n| `contains` | Feature fully contains the input geometry |\n| `crosses` | Feature crosses the input geometry |\n| `touches` | Feature shares boundary but not interior |\n| `not_intersects` | Feature does not overlap |\n| `not_within` | Feature is not fully inside |\n| `not_contains` | Feature does not fully contain |\n",
+        "properties": {
+          "around": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry for proximity search (requires `radius`)"
+          },
+          "contains": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must contain"
+          },
+          "crosses": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must cross"
+          },
+          "intersects": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must intersect"
+          },
+          "not_contains": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must NOT contain"
+          },
+          "not_intersects": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must NOT intersect"
+          },
+          "not_within": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must NOT be within"
+          },
+          "radius": {
+            "description": "Search radius in meters. Required for `around`, optional buffer for other predicates.",
+            "example": 500,
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "number"
+          },
+          "touches": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must touch"
+          },
+          "within": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "Geometry that features must be within"
+          }
+        },
+        "title": "SpatialPredicate",
+        "type": "object"
+      },
+      "ElevationLookupResult": {
+        "description": "GeoJSON Point Feature with a 3D coordinate [lng, lat, elevation] per RFC 7946 §3.1.1. The elevation is also available in `properties.elevation_m` for convenience.",
+        "properties": {
+          "geometry": {
+            "allOf": [{ "$ref": "#/components/schemas/Geometry" }],
+            "description": "3D Point geometry: [longitude, latitude, elevation_meters]"
+          },
+          "properties": {
+            "properties": {
+              "elevation_m": {
+                "description": "Elevation in meters above mean sea level (WGS84 EGM96 geoid)",
+                "example": 35.2,
+                "type": "number"
+              }
+            },
+            "required": ["elevation_m"],
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "ElevationLookupResult",
+        "type": "object"
+      },
+      "FeatureCollection": {
+        "description": "GeoJSON FeatureCollection (RFC 7946). For paginated endpoints, metadata is returned in HTTP response headers rather than the body:\n\n| Header | Description |\n|---|---|\n| `X-Limit` | Requested result limit |\n| `X-Has-More` | `true` if more results exist |\n| `X-Next-Cursor` | Opaque cursor for next page (cursor pagination) |\n| `X-Next-Offset` | Numeric offset for next page (offset pagination) |\n| `Link` | RFC 8288 `rel=\"next\"` link to the next page |\n\nContent-Type is `application/geo+json`.\n",
+        "properties": {
+          "features": {
+            "description": "Array of GeoJSON Feature objects",
+            "items": { "$ref": "#/components/schemas/GeoJsonFeature" },
+            "type": "array"
+          },
+          "type": {
+            "description": "Always `FeatureCollection`",
+            "enum": ["FeatureCollection"],
+            "type": "string"
+          }
+        },
+        "required": ["type", "features"],
+        "title": "FeatureCollection",
+        "type": "object"
+      },
+      "MultiLineStringGeometry": {
+        "description": "GeoJSON MultiLineString geometry per RFC 7946. An array of LineString coordinate arrays.",
+        "properties": {
+          "coordinates": {
+            "description": "Array of LineString coordinate arrays",
+            "items": {
+              "items": {
+                "items": { "type": "number" },
+                "maxItems": 3,
+                "minItems": 2,
+                "type": "array"
+              },
+              "minItems": 2,
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "type": { "enum": ["MultiLineString"], "type": "string" }
+        },
+        "required": ["type", "coordinates"],
+        "title": "MultiLineStringGeometry",
+        "type": "object"
+      },
+      "GeocodingFeature": {
+        "description": "GeoJSON Feature representing a geocoding result. The geometry is always a Point. Properties include the formatted display name, OSM metadata, confidence score, and source type.",
+        "properties": {
+          "geometry": { "$ref": "#/components/schemas/Geometry" },
+          "properties": {
+            "description": "Geocoding result properties",
+            "properties": {
+              "category": {
+                "description": "POI category (e.g. restaurant, cafe, park). Present for place results.",
+                "example": "restaurant",
+                "nullable": true,
+                "type": "string"
+              },
+              "city": {
+                "description": "City or town name. Present for address results.",
+                "example": "London",
+                "nullable": true,
+                "type": "string"
+              },
+              "confidence": {
+                "description": "Interpolation confidence (0-1). Present only for interpolated results.",
+                "maximum": 1,
+                "minimum": 0,
+                "nullable": true,
+                "type": "number"
+              },
+              "country": {
+                "description": "Country name. Present for reverse geocode address results.",
+                "example": "United Kingdom",
+                "nullable": true,
+                "type": "string"
+              },
+              "country_code": {
+                "description": "ISO 3166-1 alpha-2 country code",
+                "example": "GB",
+                "maxLength": 2,
+                "minLength": 2,
+                "nullable": true,
+                "type": "string"
+              },
+              "display_name": {
+                "description": "Formatted address or place name",
+                "example": "221B Baker Street, London, NW1 6XE, United Kingdom",
+                "type": "string"
+              },
+              "distance_m": {
+                "description": "Distance from the query point in meters (reverse geocode / nearby only)",
+                "nullable": true,
+                "type": "number"
+              },
+              "full_address": {
+                "description": "Complete formatted address from the database. Present for reverse geocode address results.",
+                "example": "221B Baker Street, London, NW1 6XE, United Kingdom",
+                "nullable": true,
+                "type": "string"
+              },
+              "house_number": {
+                "description": "House or building number. Present for address and interpolated results.",
+                "example": "221B",
+                "nullable": true,
+                "type": "string"
+              },
+              "interpolated": {
+                "description": "Whether this result was estimated by address interpolation rather than an exact database match.",
+                "nullable": true,
+                "type": "boolean"
+              },
+              "name": {
+                "description": "Place name (raw). Present for reverse geocode place results.",
+                "example": "Eiffel Tower",
+                "nullable": true,
+                "type": "string"
+              },
+              "osm_id": {
+                "description": "OpenStreetMap element ID (null for interpolated results)",
+                "example": 21154906,
+                "nullable": true,
+                "type": "integer"
+              },
+              "osm_type": {
+                "description": "OSM element type (node, way, relation)",
+                "enum": ["node", "way", "relation"],
+                "nullable": true,
+                "type": "string"
+              },
+              "postcode": {
+                "description": "Postal code. Present for reverse geocode address results.",
+                "example": "NW1 6XE",
+                "nullable": true,
+                "type": "string"
+              },
+              "score": {
+                "description": "Relevance score (higher is better). Incorporates text match quality, spatial proximity boost, and popularity signals. Not bounded to 0-1.",
+                "minimum": 0,
+                "nullable": true,
+                "type": "number"
+              },
+              "source": {
+                "description": "Result source indicating how the result was found: structured (exact field match), fuzzy (trigram similarity), address (reverse geocode address), place (reverse geocode POI), interpolation (estimated from neighboring addresses)",
+                "enum": [
+                  "structured",
+                  "fuzzy",
+                  "address",
+                  "place",
+                  "interpolation"
+                ],
+                "nullable": true,
+                "type": "string"
+              },
+              "state": {
+                "description": "State or province name. Present for reverse geocode address results.",
+                "example": "England",
+                "nullable": true,
+                "type": "string"
+              },
+              "street": {
+                "description": "Street name. Present for address and interpolated results.",
+                "example": "Baker Street",
+                "nullable": true,
+                "type": "string"
+              },
+              "subcategory": {
+                "description": "POI subcategory. Present for place results.",
+                "example": "italian",
+                "nullable": true,
+                "type": "string"
+              },
+              "tags": {
+                "additionalProperties": { "type": "string" },
+                "description": "Raw OSM tags. Present for place results.",
+                "nullable": true,
+                "type": "object"
+              },
+              "wikipedia": {
+                "description": "Wikipedia article reference (e.g. en:Eiffel Tower). Present for notable places.",
+                "example": "en:Eiffel Tower",
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": ["display_name"],
+            "type": "object"
+          },
+          "type": { "enum": ["Feature"], "type": "string" }
+        },
+        "required": ["type", "geometry", "properties"],
+        "title": "GeocodingFeature",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "description": "API key via `x-api-key` header",
+        "in": "header",
+        "name": "x-api-key",
+        "type": "apiKey"
+      },
+      "BearerAuth": {
+        "description": "API key as Bearer token: `Authorization: Bearer <key>`",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Geospatial data API serving the complete OpenStreetMap planet dataset.\n\nPlaza provides geocoding, routing, search, isochrones, elevation, map matching,\nroute optimization, and raw OSM element queries — all from a single API. Spatial\ndata is indexed using a proprietary H3 hexagonal tiling system for fast lookups\nat any scale.\n\n**Authentication**: Pass your API key via `Authorization: Bearer <key>`, `x-api-key: <key>` header, or `api_key=<key>` query parameter.\n\n**Response format**: Spatial endpoints return GeoJSON (`application/geo+json`). Paginated responses put metadata in HTTP headers (`X-Limit`, `X-Has-More`, `X-Next-Cursor`, `Link`), not the body.\n",
+    "title": "Plaza API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/datasets": {
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetController.index",
+        "parameters": [
+          {
+            "description": "Filter by scope: plaza, user. Default shows user's own + plaza datasets.",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DatasetList" }
+              }
+            },
+            "description": "Dataset list"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "List datasets",
+        "tags": ["Datasets"]
+      },
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetController.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DatasetCreateRequest" }
+            }
+          },
+          "description": "Dataset attributes",
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DatasetResponse" }
+              }
+            },
+            "description": "Created dataset"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create a new dataset",
+        "tags": ["Datasets"]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/features": {
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetFeatureController.index",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Maximum results (default 100, max 10000)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Cursor for pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeatureCollection" }
+              }
+            },
+            "description": "GeoJSON FeatureCollection"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "List features in a dataset",
+        "tags": ["Dataset Features"]
+      },
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetFeatureController.create",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetFeatureCreateRequest"
+              }
+            }
+          },
+          "description": "GeoJSON features",
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DatasetFeatureList" }
+              }
+            },
+            "description": "Created features"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Add features to a dataset",
+        "tags": ["Dataset Features"]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/features/{id}": {
+      "delete": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetFeatureController.delete",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Feature ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Deleted" },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Delete a feature",
+        "tags": ["Dataset Features"]
+      },
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetFeatureController.show",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Feature ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetFeatureResponse"
+                }
+              }
+            },
+            "description": "GeoJSON Feature"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Get a single feature",
+        "tags": ["Dataset Features"]
+      },
+      "patch": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetFeatureController.update",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Feature ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetFeatureUpdateRequest"
+              }
+            }
+          },
+          "description": "Feature update",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetFeatureResponse"
+                }
+              }
+            },
+            "description": "Updated feature"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Update a feature",
+        "tags": ["Dataset Features"]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/upload": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetController.upload",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DatasetResponse" }
+              }
+            },
+            "description": "Upload accepted"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Dataset is processing"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "File too large"
+          }
+        },
+        "summary": "Upload data into a dataset",
+        "tags": ["Datasets"]
+      }
+    },
+    "/api/v1/datasets/{id}": {
+      "delete": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetController.delete",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Deleted" },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Delete a dataset",
+        "tags": ["Datasets"]
+      },
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetController.show",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DatasetResponse" }
+              }
+            },
+            "description": "Dataset"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Get dataset by ID",
+        "tags": ["Datasets"]
+      },
+      "patch": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.DatasetController.update",
+        "parameters": [
+          {
+            "description": "Dataset ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DatasetUpdateRequest" }
+            }
+          },
+          "description": "Dataset attributes",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DatasetResponse" }
+              }
+            },
+            "description": "Updated dataset"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Update a dataset",
+        "tags": ["Datasets"]
+      }
+    },
+    "/api/v1/elevation": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.ElevationController.lookup",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElevationLookupRequest"
+              }
+            }
+          },
+          "description": "Elevation lookup request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElevationLookupResult"
+                }
+              }
+            },
+            "description": "Elevation result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "No elevation data"
+          }
+        },
+        "summary": "Look up elevation at one or more points",
+        "tags": ["Elevation"]
+      }
+    },
+    "/api/v1/elevation/profile": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.ElevationController.profile",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElevationProfileRequest"
+              }
+            }
+          },
+          "description": "Profile request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElevationProfileResult"
+                }
+              }
+            },
+            "description": "Elevation profile"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "No elevation data"
+          }
+        },
+        "summary": "Elevation profile along coordinates",
+        "tags": ["Elevation"]
+      }
+    },
+    "/api/v1/features": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.FeatureController.index",
+        "parameters": [
+          {
+            "description": "Element types (comma-separated: node,way,relation)",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Legacy shorthand. H3 cell index. Use spatial predicates instead.",
+            "in": "query",
+            "name": "h3",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Maximum results (default 100, max 10000)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Cursor for pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Response format. json (default) returns paginated GeoJSON. geojson/csv/ndjson stream via chunked transfer encoding.",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SpatialPredicate" }
+            }
+          },
+          "description": "Spatial filter and query options",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeatureCollection" }
+              }
+            },
+            "description": "GeoJSON FeatureCollection"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Query features by spatial predicate, bounding box, or H3 cell",
+        "tags": ["Features"]
+      }
+    },
+    "/api/v1/features/batch": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.FeatureController.batch",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BatchRequest" }
+            }
+          },
+          "description": "Batch request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeatureCollection" }
+              }
+            },
+            "description": "GeoJSON FeatureCollection"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Fetch multiple features by type and ID",
+        "tags": ["Features"]
+      }
+    },
+    "/api/v1/features/{type}/{id}": {
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.FeatureController.show",
+        "parameters": [
+          {
+            "description": "Element type (node, way, relation)",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "OSM ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GeoJsonFeature" }
+              }
+            },
+            "description": "GeoJSON Feature"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Get feature by type and ID",
+        "tags": ["Features"]
+      }
+    },
+    "/api/v1/geocode": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.GeocodeController.forward",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GeocodeForwardRequest" }
+            }
+          },
+          "description": "Forward geocode request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GeocodeResult" }
+              }
+            },
+            "description": "Geocoding results"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Forward geocode an address",
+        "tags": ["Geocoding"]
+      }
+    },
+    "/api/v1/geocode/autocomplete": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.GeocodeController.autocomplete",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AutocompleteRequest" }
+            }
+          },
+          "description": "Autocomplete request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AutocompleteResult" }
+              }
+            },
+            "description": "Autocomplete results"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Autocomplete a partial address",
+        "tags": ["Geocoding"]
+      }
+    },
+    "/api/v1/geocode/batch": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.GeocodeController.batch",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "addresses": {
+                    "items": { "type": "string" },
+                    "maxItems": 1000,
+                    "type": "array"
+                  }
+                },
+                "required": ["addresses"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Batch geocode request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BatchGeocodeResult" }
+              }
+            },
+            "description": "Batch results"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Batch geocode multiple addresses",
+        "tags": ["Geocoding"]
+      }
+    },
+    "/api/v1/geocode/reverse": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.GeocodeController.reverse",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GeocodeReverseRequest" }
+            }
+          },
+          "description": "Reverse geocode request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReverseGeocodeResult"
+                }
+              }
+            },
+            "description": "Reverse geocoding result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "No address found"
+          }
+        },
+        "summary": "Reverse geocode a coordinate",
+        "tags": ["Geocoding"]
+      }
+    },
+    "/api/v1/isochrone": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.IsochroneController.isochrone",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IsochroneRequest" }
+            }
+          },
+          "description": "Isochrone request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IsochroneResult" }
+              }
+            },
+            "description": "Isochrone polygon"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "No reachable vertices"
+          }
+        },
+        "summary": "Calculate an isochrone from a point",
+        "tags": ["Isochrone"]
+      }
+    },
+    "/api/v1/map-match": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.MapMatchController.match",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MapMatchRequest" }
+            }
+          },
+          "description": "Map match request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MapMatchResult" }
+              }
+            },
+            "description": "Match result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Could not match points"
+          }
+        },
+        "summary": "Match GPS coordinates to the road network",
+        "tags": ["Map Matching"]
+      }
+    },
+    "/api/v1/matrix": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.MatrixController.matrix",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MatrixRequest" }
+            }
+          },
+          "description": "Matrix request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatrixResult" }
+              }
+            },
+            "description": "Distance matrix"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Vertices not found"
+          }
+        },
+        "summary": "Calculate a distance matrix between points",
+        "tags": ["Distance Matrix"]
+      }
+    },
+    "/api/v1/nearest": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.RouteController.nearest",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/NearestRequest" }
+            }
+          },
+          "description": "Nearest request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NearestResult" }
+              }
+            },
+            "description": "Nearest road result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "No road nearby"
+          }
+        },
+        "summary": "Snap a coordinate to the nearest road",
+        "tags": ["Routing"]
+      }
+    },
+    "/api/v1/optimize": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.OptimizeController.optimize",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OptimizeRequest" }
+            }
+          },
+          "description": "Optimize request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OptimizeResult" }
+              }
+            },
+            "description": "Optimization result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Optimize route through waypoints",
+        "tags": ["Optimization"]
+      }
+    },
+    "/api/v1/optimize/{job_id}": {
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.OptimizeController.show",
+        "parameters": [
+          {
+            "description": "",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OptimizeJobStatus" }
+              }
+            },
+            "description": "Optimization status"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Job not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Optimization failed"
+          }
+        },
+        "summary": "Get async optimization result",
+        "tags": ["Optimization"]
+      }
+    },
+    "/api/v1/query": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.QueryController.query",
+        "parameters": [
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PlazaQLQuery" }
+            }
+          },
+          "description": "PlazaQL query",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeatureCollection" }
+              }
+            },
+            "description": "GeoJSON FeatureCollection"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Query error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Execute a PlazaQL query",
+        "tags": ["Query"]
+      }
+    },
+    "/api/v1/route": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.RouteController.route",
+        "parameters": [
+          {
+            "description": "Response format for alternatives: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RouteRequest" }
+            }
+          },
+          "description": "Route request",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RouteResult" }
+              }
+            },
+            "description": "Route result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "No route found"
+          }
+        },
+        "summary": "Calculate a route between two points",
+        "tags": ["Routing"]
+      }
+    },
+    "/api/v1/search": {
+      "post": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.SearchController.index",
+        "parameters": [
+          {
+            "description": "Search query string",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Response format: json (default), geojson, csv, ndjson",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Maximum results (default 25, max 100)",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Cursor for pagination",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Coordinate decimal precision (1-15, default 7)",
+            "in": "query",
+            "name": "output[precision]",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Comma-separated property fields to include",
+            "in": "query",
+            "name": "output[fields]",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Extra computed fields: bbox, distance, center",
+            "in": "query",
+            "name": "output[include]",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Sort by: distance, name, osm_id",
+            "in": "query",
+            "name": "output[sort]",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeatureCollection" }
+              }
+            },
+            "description": "GeoJSON FeatureCollection"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Search OSM features by name",
+        "tags": ["Search"]
+      }
+    },
+    "/api/v1/tiles/{z}/{x}/{y}": {
+      "get": {
+        "callbacks": {},
+        "operationId": "PlazaWeb.Api.V1.TileController.show",
+        "parameters": [
+          {
+            "description": "Zoom level (0-22)",
+            "in": "path",
+            "name": "z",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Tile X coordinate",
+            "in": "path",
+            "name": "x",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Tile Y coordinate",
+            "in": "path",
+            "name": "y",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.mapbox-vector-tile": {
+                "schema": { "format": "binary", "type": "string" }
+              }
+            },
+            "description": "Mapbox Vector Tile"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Invalid tile coordinates"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get a Mapbox Vector Tile",
+        "tags": ["Tiles"]
+      }
+    }
+  },
+  "security": [{ "BearerAuth": [] }, { "ApiKeyHeader": [] }],
+  "servers": [
+    {
+      "description": "Production",
+      "url": "https://plaza.fyi",
+      "variables": {}
+    },
+    {
+      "description": "Local development",
+      "url": "http://localhost:4000",
+      "variables": {}
+    }
+  ],
+  "tags": []
+}
